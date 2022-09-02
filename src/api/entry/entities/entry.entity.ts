@@ -11,11 +11,11 @@ export class Entry {
     @Column({ type: 'smallint', nullable: false })
     team_id: number;
 
-    @Column({ type: 'smallint', nullable: false })
-    date: number;
+    @Column({ type: 'datetime', nullable: false })
+    date: Date;
 
-    @Column({ type: 'smallint', nullable: false })
-    comment: number;
+    @Column({ type: 'varchar', nullable: false })
+    comment: string;
 
     @Column({ type: 'smallint', nullable: false })
     user_id: number;
@@ -30,11 +30,11 @@ export class Entry {
     update_by: number;
 
     @Column({ type: 'tinyint', nullable: false })
-    created_at: number;
-
-    @Column({ type: 'tinyint', nullable: false })
-    updated_at: number;
-
-    @Column({ type: 'tinyint', nullable: false })
     paid: number;
+
+    @Column({ type: 'datetime', nullable: false })
+    created_at: Date;
+
+    @Column({ type: 'datetime', nullable: false })
+    updated_at: Date;
 }
