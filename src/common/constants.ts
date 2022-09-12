@@ -1,4 +1,3 @@
 export enum RabbitMQ {
-    EntryQueue = 'attendanceEntry',
-    StatusQueue = 'attendanceStatus'
+    AttendanceQueue = 'attendance',
 }
