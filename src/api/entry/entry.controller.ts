@@ -4,6 +4,7 @@ import { EntryService } from './entry.service';
 import { CreateEntryDto } from './dto/create-entry.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
 import { Entry } from './entities/entry.entity';
+import { CreateEntriesDto } from './dto/create-entries.dto';
 
 @Controller()
 export class EntryController {
@@ -12,6 +13,11 @@ export class EntryController {
   @MessagePattern('createEntry')
   create(@Payload() createEntrieDto: CreateEntryDto) {
     return this.entryService.create(createEntrieDto);
+  }
+
+  @MessagePattern('createBulkEntry')
+  createBulk(@Payload() createEntriesDto: CreateEntriesDto) {
+    return this.entryService.createBulk(createEntriesDto);
   }
 
   @MessagePattern('findAllEntry')
