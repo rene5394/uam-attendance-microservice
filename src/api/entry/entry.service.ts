@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AttendanceStatus } from 'src/common/enums/attendanceStatus.enum';
+import { CustomRpcException } from 'src/common/exception/custom-rpc.exception';
 import { daysBetweenDates, daysBetweenDatesNoWeekends } from 'src/common/utils/timeValidation';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CreateEntriesDto } from './dto/create-entries.dto';
 import { CreateEntryDto } from './dto/create-entry.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
@@ -11,6 +12,7 @@ import { Entry } from './entities/entry.entity';
 @Injectable()
 export class EntryService {
   constructor(
+    private dataSource: DataSource,
     @InjectRepository(Entry)
     private readonly entryRepository: Repository<Entry>
   ) {}
@@ -40,34 +42,47 @@ export class EntryService {
       daysRequested = daysBetweenDates(startDate, endDate);
     }
 
-    const newattendanceEntries = await Promise.all(
-      daysRequested.map( async(day: Date) => {
-        day.setUTCHours(6, 0, 0, 0);
-        createEntriesDto.date = day;
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-        const entry = {
-          employee_id: createEntriesDto.employee_id,
-          team_id: createEntriesDto.team_id,
-          user_id: createEntriesDto.user_id,
-          attendance_status: createEntriesDto.attendance_status,
-          date: createEntriesDto.date
-        } as CreateEntryDto;
+    try {
+      const newattendanceEntries = await Promise.all(
+        daysRequested.map( async(day: Date) => {
+          day.setUTCHours(6, 0, 0, 0);
+          createEntriesDto.date = day;
 
-        const attendance = await this.entryRepository.findOne({ where: {
-          user_id: createEntriesDto.user_id,
-          date: createEntriesDto.date
-        }});
+          const entry = {
+            employee_id: createEntriesDto.employee_id,
+            team_id: createEntriesDto.team_id,
+            user_id: createEntriesDto.user_id,
+            attendance_status: createEntriesDto.attendance_status,
+            date: createEntriesDto.date
+          } as CreateEntryDto;
 
-        if (attendance) {
-          attendance.attendance_status = createEntriesDto.attendance_status;
-          return await this.entryRepository.save(attendance);
-        }
+          const attendance = await this.entryRepository.findOne({ where: {
+            user_id: createEntriesDto.user_id,
+            date: createEntriesDto.date
+          }});
 
-        return await this.entryRepository.save(entry);
-      })
-    )
+          if (attendance) {
+            attendance.attendance_status = createEntriesDto.attendance_status;
+            return await queryRunner.manager.save(Entry, entry);
+          }
 
-    return newattendanceEntries;
+          return await queryRunner.manager.save(Entry, entry);
+        })
+      )
+
+      await queryRunner.commitTransaction();
+
+      return newattendanceEntries;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+
+      throw new CustomRpcException('Error executing create attendance entries SQL transaction'
+      , HttpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error');
+    }
   }
 
   async findAll(): Promise<Entry[]> {
