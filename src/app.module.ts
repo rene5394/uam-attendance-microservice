@@ -16,7 +16,10 @@ import { StatusModule } from './api/status/status.module';
       database: process.env.DATABASE || 'uamapp',
       entities: [],
       autoLoadEntities: true,
-      synchronize: false
+      synchronize: false,
+      extra : {
+        connectionLimit: 25
+      }
     }),
     EntryModule,
     StatusModule],
